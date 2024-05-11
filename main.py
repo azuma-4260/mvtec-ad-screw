@@ -72,6 +72,8 @@ def init_feature_matching(files_train):
     ref_img = cv2.imread(files_train[0])[..., ::-1]  # BGR2RGB
     ref_img = cv2.resize(ref_img, (256, 256), interpolation=cv2.INTER_AREA)
     ref_img = ref_img[16:(256 - 16), 16:(256 - 16)]
+    os.makedirs('screw/aligned', exist_ok=True)
+    cv2.imwrite('screw/aligned/ref.png', ref_img)
 
     # 参照画像のキーポイントとディスクリプタを抽出
     kp1, des1 = orb.detectAndCompute(ref_img, None)
@@ -82,7 +84,7 @@ def init_feature_matching(files_train):
 
 
 # ねじの向きをそろえる
-def align(orb, kp1, des1, bf, img_prep, white_padding):
+def align(orb, kp1, des1, bf, img_prep):
     # 現在の画像のキーポイントとディスクリプタを抽出
     kp2, des2 = orb.detectAndCompute(img_prep, None)
 
@@ -91,15 +93,20 @@ def align(orb, kp1, des1, bf, img_prep, white_padding):
     matches = sorted(matches, key=lambda x: x.distance)
 
     # 最良マッチのトップNを使用してホモグラフィを計算
-    if len(matches) > 40:
+    if len(matches) > 10:
         src_pts = np.float32([kp1[m.queryIdx].pt for m in matches[:10]]).reshape(-1, 1, 2)
         dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches[:10]]).reshape(-1, 1, 2)
 
-        # ホモグラフィ行列を計算し、画像を変換
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-        aligned_img = cv2.warpPerspective(img_prep, M, (img_prep.shape[1], img_prep.shape[0]),
-                                          borderValue=(255, 255, 255) if white_padding else (0, 0, 0))
+        # アフィン変換行列を計算し、最適な90度単位の回転を見つける
+        M, mask = cv2.estimateAffinePartial2D(src_pts, dst_pts, method=cv2.RANSAC)
+        angle = np.arctan2(M[0, 1], M[0, 0]) * 180 / np.pi
+        rotation_angle = np.round(angle / 90) * 90
 
+        # 画像を回転
+        center = (img_prep.shape[1] // 2, img_prep.shape[0] // 2)
+        M = cv2.getRotationMatrix2D(center, -rotation_angle, 1.0)
+        aligned_img = cv2.warpAffine(img_prep, M, (img_prep.shape[1], img_prep.shape[0]),
+                                     borderMode=cv2.BORDER_CONSTANT)
         return aligned_img
     else:
         # マッチングが不十分な場合、オリジナル画像を使用
@@ -107,7 +114,7 @@ def align(orb, kp1, des1, bf, img_prep, white_padding):
 
 
 # 学習データから特徴収集
-def get_features_train(files_train, device, model, outputs, use_matching=False, white_padding=False):
+def get_features_train(files_train, device, model, outputs, use_matching=False):
     outputs.clear()
 
     if use_matching:
@@ -124,7 +131,9 @@ def get_features_train(files_train, device, model, outputs, use_matching=False, 
         img_prep = img_prep[16:(256 - 16), 16:(256 - 16)]
 
         if use_matching:
-            img_prep = align(orb, kp1, des1, bf, img_prep, white_padding)
+            img_prep = align(orb, kp1, des1, bf, img_prep)
+            os.makedirs('screw/aligned/train', exist_ok=True)
+            cv2.imwrite(os.path.join('screw/aligned/train', os.path.basename(file)), img_prep)
 
         img_train.append(img)
         img_prep_train.append(img_prep)
@@ -177,12 +186,14 @@ def get_features_test(files_test, device, model, types_test, outputs, orb, kp1, 
             img_prep = img_prep[16:(256 - 16), 16:(256 - 16)]
 
             if use_matching:
-                img_prep = align(orb, kp1, des1, bf, img_prep, white_padding)
+                img_prep = align(orb, kp1, des1, bf, img_prep)
+                os.makedirs(os.path.join('screw/aligned/test', type_test), exist_ok=True)
+                cv2.imwrite(os.path.join('screw/aligned/test', type_test, os.path.basename(file)), img_prep)
 
             img_test[type_test].append(img)
             img_prep_test[type_test].append(img_prep)
 
-            if (type_test == 'good'):
+            if type_test == 'good':
                 gt = np.zeros_like(img_prep[..., 0], dtype=np.uint8)
             else:
                 file_gt = file.replace('/test/', '/ground_truth/')
@@ -388,7 +399,7 @@ def get_anomaly_detection(score_test, types_test, save_dir):
     return per_image_rocauc
 
 
-def main(use_matching, white_padding, save_dir):
+def main(use_matching, save_dir):
     torch_fix_seed(0)
 
     model, device, outputs = get_model(layer1_index=2, layer2_index=3, layer3_index=3)
@@ -396,10 +407,10 @@ def main(use_matching, white_padding, save_dir):
     files_train, files_test, types_test = get_files()
 
     f1_train, f2_train, f3_train, orb, kp1, des1, bf = get_features_train(files_train, device, model, outputs,
-                                                                          use_matching, white_padding)
+                                                                          use_matching)
 
     f1_test, f2_test, f3_test = get_features_test(files_test, device, model, types_test, outputs, orb, kp1, des1, bf,
-                                                  use_matching, white_padding)
+                                                  use_matching)
 
     f1_train, f2_train, f3_train, f1_test, f2_test, f3_test = get_features_random_choice(f1_train, f2_train, f3_train,
                                                                                          f1_test, f2_test, f3_test,
@@ -415,13 +426,10 @@ def main(use_matching, white_padding, save_dir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train or evaluate the model.')
     parser.add_argument('--use_matching', type=bool, default=False)
-    parser.add_argument('--white_padding', type=bool, default=False)
     args = parser.parse_args()
-    if args.use_matching and args.white_padding:
-        save_dir = 'results/align_white'
-    elif args.use_matching:
+    if args.use_matching:
         save_dir = 'results/align'
     else:
         save_dir = 'results/original'
 
-    main(args.use_matching, args.white_padding, save_dir)
+    main(args.use_matching, save_dir)
