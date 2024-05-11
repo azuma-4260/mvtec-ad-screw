@@ -334,10 +334,14 @@ def get_anomaly_detection(score_test, types_test, save_dir):
     plt.scatter((np.arange(len(score_test[type_test])) + N_test),
                 np.max(np.max(score_test[type_test], axis=-1), axis=-1),
                 alpha=0.5, label=type_test)
+    plt.xlabel('Sample Index')
+    plt.ylabel('Max Score')
 
     plt.subplot(2, 1, 2)
     plt.hist(np.max(np.max(score_test[type_test], axis=-1), axis=-1),
              alpha=0.5, bins=10, label=type_test)
+    plt.xlabel('Max Score')
+    plt.ylabel('Frequency')
 
     y_hat_list.append(np.max(np.max(score_test[type_test], axis=-1), axis=-1))
     y_list.append(np.zeros([len(score_test[type_test])], dtype=np.int16))
@@ -387,7 +391,7 @@ def get_anomaly_detection(score_test, types_test, save_dir):
 def main(use_matching, white_padding, save_dir):
     torch_fix_seed(0)
 
-    model, device, outputs = get_model(layer1_index=0, layer2_index=0, layer3_index=1)
+    model, device, outputs = get_model(layer1_index=2, layer2_index=3, layer3_index=3)
 
     files_train, files_test, types_test = get_files()
 
