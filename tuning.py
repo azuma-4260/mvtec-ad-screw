@@ -17,10 +17,10 @@ def main():
                 files_train, files_test, types_test = get_files()
 
                 f1_train, f2_train, f3_train, orb, kp1, des1, bf = get_features_train(files_train, device, model,
-                                                                                      outputs)
+                                                                                      outputs, use_matching=True)
 
                 f1_test, f2_test, f3_test = get_features_test(files_test, device, model, types_test, outputs, orb, kp1,
-                                                              des1, bf)
+                                                              des1, bf, use_matching=True)
 
                 f1_train, f2_train, f3_train, f1_test, f2_test, f3_test = get_features_random_choice(f1_train, f2_train,
                                                                                                      f3_train, f1_test,

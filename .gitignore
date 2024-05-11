@@ -3,3 +3,4 @@ screw.tar.xz
 nohup.out
 model.txt
 .idea
+__pycache__

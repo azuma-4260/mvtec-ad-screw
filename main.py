@@ -84,33 +84,35 @@ def init_feature_matching(files_train):
 
 
 # ねじの向きをそろえる
-def align(orb, kp1, des1, bf, img_prep):
-    # 現在の画像のキーポイントとディスクリプタを抽出
-    kp2, des2 = orb.detectAndCompute(img_prep, None)
+def align(orb, kp1, des1, bf, img_original):
+    flip_modes = [None, 0, 1, -1]  # フリップなし、垂直、水平、両方
+    best_match_count = 0
+    best_aligned_img = img_original
 
-    # マッチング
-    matches = bf.match(des1, des2)
-    matches = sorted(matches, key=lambda x: x.distance)
+    for flip_mode in flip_modes:
+        img_prep = cv2.flip(img_original, flip_mode) if flip_mode is not None else img_original.copy()
+        kp2, des2 = orb.detectAndCompute(img_prep, None)
 
-    # 最良マッチのトップNを使用してホモグラフィを計算
-    if len(matches) > 10:
-        src_pts = np.float32([kp1[m.queryIdx].pt for m in matches[:10]]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches[:10]]).reshape(-1, 1, 2)
+        matches = bf.match(des1, des2)
+        matches = sorted(matches, key=lambda x: x.distance)
 
-        # アフィン変換行列を計算し、最適な90度単位の回転を見つける
-        M, mask = cv2.estimateAffinePartial2D(src_pts, dst_pts, method=cv2.RANSAC)
-        angle = np.arctan2(M[0, 1], M[0, 0]) * 180 / np.pi
-        rotation_angle = np.round(angle / 90) * 90
+        # 最良のマッチの数を評価
+        if len(matches) > best_match_count:
+            best_match_count = len(matches)
+            src_pts = np.float32([kp1[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+            dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 
-        # 画像を回転
-        center = (img_prep.shape[1] // 2, img_prep.shape[0] // 2)
-        M = cv2.getRotationMatrix2D(center, -rotation_angle, 1.0)
-        aligned_img = cv2.warpAffine(img_prep, M, (img_prep.shape[1], img_prep.shape[0]),
-                                     borderMode=cv2.BORDER_CONSTANT)
-        return aligned_img
-    else:
-        # マッチングが不十分な場合、オリジナル画像を使用
-        return img_prep
+            M, mask = cv2.estimateAffinePartial2D(src_pts, dst_pts, method=cv2.RANSAC)
+            angle = np.arctan2(M[0, 1], M[0, 0]) * 180 / np.pi
+            rotation_angle = np.round(angle / 90) * 90
+
+            center = (img_prep.shape[1] // 2, img_prep.shape[0] // 2)
+            M = cv2.getRotationMatrix2D(center, -rotation_angle, 1.0)
+            best_aligned_img = cv2.warpAffine(img_prep, M, (img_prep.shape[1], img_prep.shape[0]),
+                                             borderMode=cv2.BORDER_CONSTANT)
+
+    return best_aligned_img
+
 
 
 # 学習データから特徴収集
@@ -402,7 +404,7 @@ def get_anomaly_detection(score_test, types_test, save_dir):
 def main(use_matching, save_dir):
     torch_fix_seed(0)
 
-    model, device, outputs = get_model(layer1_index=2, layer2_index=3, layer3_index=3)
+    model, device, outputs = get_model(layer1_index=0, layer2_index=2, layer3_index=1)
 
     files_train, files_test, types_test = get_files()
 
