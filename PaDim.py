@@ -430,8 +430,8 @@ if __name__ == '__main__':
     parser.add_argument('--use_matching', type=bool, default=False)
     args = parser.parse_args()
     if args.use_matching:
-        save_dir = 'results/align'
+        save_dir = 'results/PaDim/align'
     else:
-        save_dir = 'results/original'
+        save_dir = 'results/PaDim/original'
 
     main(args.use_matching, save_dir)
