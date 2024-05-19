@@ -1,0 +1,122 @@
+[
+  {
+    "layer2_index": 3,
+    "layer3_index": 5,
+    "score": 0.9866775978684157
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 5,
+    "score": 0.9862676778028284
+  },
+  {
+    "layer2_index": 3,
+    "layer3_index": 4,
+    "score": 0.9819635171141627
+  },
+  {
+    "layer2_index": 3,
+    "layer3_index": 0,
+    "score": 0.9817585570813692
+  },
+  {
+    "layer2_index": 3,
+    "layer3_index": 2,
+    "score": 0.9815535970485756
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 1,
+    "score": 0.9805287968846075
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 0,
+    "score": 0.9803238368518139
+  },
+  {
+    "layer2_index": 3,
+    "layer3_index": 3,
+    "score": 0.9801188768190204
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 5,
+    "score": 0.9778643164582907
+  },
+  {
+    "layer2_index": 3,
+    "layer3_index": 1,
+    "score": 0.977659356425497
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 4,
+    "score": 0.9768395162943226
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 3,
+    "score": 0.9766345562615291
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 4,
+    "score": 0.9764295962287353
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 2,
+    "score": 0.9760196761631482
+  },
+  {
+    "layer2_index": 2,
+    "layer3_index": 2,
+    "score": 0.9760196761631482
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 3,
+    "score": 0.9743799959007994
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 0,
+    "score": 0.971920475507276
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 5,
+    "score": 0.9717155154744825
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 4,
+    "score": 0.9715105554416889
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 2,
+    "score": 0.9713055954088953
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 1,
+    "score": 0.9706907153105144
+  },
+  {
+    "layer2_index": 0,
+    "layer3_index": 3,
+    "score": 0.9700758352121335
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 1,
+    "score": 0.9696659151465464
+  },
+  {
+    "layer2_index": 1,
+    "layer3_index": 0,
+    "score": 0.9694609551137527
+  }
+]
