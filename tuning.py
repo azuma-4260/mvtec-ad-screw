@@ -1,9 +1,10 @@
-from main import *
+from PaDim import *
 from seed import torch_fix_seed
 from tqdm import trange
+from PatchCore import *
 
 
-def main():
+def PaDim():
     results = []
 
     for layer1_index in trange(3):
@@ -32,7 +33,7 @@ def main():
 
                 score_test = get_mahalanobis_distance(f123_train, f123_test, types_test)
 
-                score = get_anomaly_detection(score_test, types_test, save_dir='results/tuning')
+                score = get_anomaly_detection(score_test, types_test, save_dir='results/PaDim/tuning')
 
                 result = {'layer1_index': layer1_index,
                           'layer2_index': layer2_index,
@@ -45,9 +46,65 @@ def main():
 
     results = sorted(results, key=lambda x: x['score'], reverse=True)
     import json
-    with open('results/tuning/results.json', 'w') as f:
+    with open('results/PaDim/tuning/results.json', 'w') as f:
+        json.dump(results, f, indent=2)
+
+def PatchCore(save_dir, backbone):
+    results = []
+    layer2_start = 0 if backbone == 'wide_resnet50_2' else 1
+    layer2_end = 3 if backbone == 'wide_resnet50_2' else 12
+    layer2_step = 1 if backbone == 'wide_resnet50_2' else 4
+    layer3_start = 0 if backbone == 'wide_resnet50_2' else 1
+    layer3_end = 6 if backbone == 'wide_resnet50_2' else 48
+    layer3_step = 1 if backbone == 'wide_resnet50_2' else 8
+    for i in range(layer2_start, layer2_end + 1, layer2_step):
+        for j in range(layer3_start, layer3_end + 1, layer3_step):
+            layer2_index = i
+            layer3_index = j
+
+            torch_fix_seed(0)
+
+            model, outputs, device = prepare_extractor(layer2_index, layer3_index, backbone=backbone)
+
+            # ファイル名を取得
+            files_train, files_test, types_test = get_files()
+
+            img_prep_train = load_train_imgs(files_train)
+
+            feat_train, MEAN, STD, patch_shapes, ref_num_patches, pretrain_embed_dimension, target_embed_dimension, unfolder = extract_train_features(device, model, outputs, img_prep_train)
+
+            feat_train_coreset = core_set_sampling(feat_train, device)
+
+            search_index = create_knn_index(feat_train_coreset, use_gpu=False)
+
+            img_prep_test = load_test_imgs(files_test, types_test)
+
+            feat_test = extract_test_features(device, model, outputs, img_prep_test, types_test, MEAN, STD, patch_shapes, ref_num_patches, pretrain_embed_dimension, target_embed_dimension, unfolder)
+
+            score_test = get_anomaly_score(feat_test, search_index, types_test)
+
+            # 結果保存
+            score = get_anomaly_detection(score_test, types_test, save_dir=save_dir)
+
+            result = {'layer2_index': layer2_index,
+                      'layer3_index': layer3_index,
+                      'score': score}
+            results.append(result)
+
+    results = sorted(results, key=lambda x: x['score'], reverse=True)
+    import json
+    with open(f'{save_dir}/results.json', 'w') as f:
         json.dump(results, f, indent=2)
 
 
 if __name__ == '__main__':
-    main()
+    mode = 'PatchCore'
+
+    if mode == 'PaDim':
+        PaDim()
+    else:
+        backbone = 'densenet201'
+        save_dir = f'results/PatchCore/tuning/{backbone}'
+        os.makedirs(save_dir, exist_ok=True)
+        PatchCore(save_dir, backbone)
+
