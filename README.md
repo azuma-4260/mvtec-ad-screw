@@ -3,19 +3,27 @@
 [こちら](https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/download/420938130-1629953152/screw.tar.xz)からインストール
 ### データの例
 <div style="display: flex;">
-    <img src="figure/train_sample1.png" width="400" style="margin-right: 20px;"/>
-    <img src="figure/train_sample2.png" width="400"/>
+    <img src="figure/PaDim/train_sample1.png" width="400" style="margin-right: 20px;"/>
+    <img src="figure/PaDim/train_sample2.png" width="400"/>
 </div>
 
 
 ## 手法
+### 1週目
 - [PaDim](https://arxiv.org/abs/2011.08785)を使用した
 - コードは[こちら](https://tech.anytech.co.jp/entry/2023/03/23/100000)を参考にした
 - [この論文](https://openaccess.thecvf.com/content/CVPR2023W/VAND/papers/Heckler_Exploring_the_Importance_of_Pretrained_Feature_Extractors_for_Unsupervised_Anomaly_CVPRW_2023_paper.pdf)を参考にして、適切な特徴レイヤーの選択をした
 - ねじが向いている方向がバラバラであり、PaDimは移動や回転などの位置ずれに関して弱いという性質があるため、特徴点マッチングを使用して、ある画像のねじの向きに他の画像のねじの向きを合わせることで精度が上がるのかを試した
 
+### 2週目
+- [PatchCore](https://arxiv.org/abs/2106.08265)を使用した
+- コードは1週目の参考サイトと同じ
+- 1週目と同様に適切なレイヤーの選択をした
+- バックボーンの精度への影響を実験をした
+
 ## 結果
-### 特徴レイヤーの選択
+### 1週目
+#### 特徴レイヤーの選択
 - 今回はPaDimのバックボーンにWideResNet50-2を使用した
 - デフォルトではWideResNetのlayer1, layer2, layer3の最後の特徴マップを使用して特徴量を取得する構造
 - 適切な特徴マップを取得することが精度向上につながるのので、取りうるすべての特徴マップの組み合わせを試して、どの組み合わせが最もこのタスクにおいて精度が高くなるのか検証（`tuning.py`）
@@ -31,14 +39,14 @@
 
 - 最も精度が高い組み合わせの結果を以下に示す
 <div>
-    <img src="figure/scatter_hist_best.png" style="display: block; margin: auto;"/>
+    <img src="figure/PaDim/scatter_hist_best.png" style="display: block; margin: auto;"/>
     <p style="text-align: center; font-weight: bold;">異常値スコアと出現頻度</p>
-    <img src="figure/rocauc_curve_best.png" style="display: block; margin: auto;"/>
+    <img src="figure/PaDim/rocauc_curve_best.png" style="display: block; margin: auto;"/>
     <p style="text-align: center; font-weight: bold;">ROCカーブとAUC</p>
 </div>
 
 
-### 特徴マッチングを用いたねじの向き合わせ
+#### 特徴マッチングを用いたねじの向き合わせ
 - 訓練画像の`000.png`を参照画像とし、ORBを用いて特徴点を取得
 - 各訓練画像とテスト画像は参照画像と特徴点マッチングを行い、90°単位で最適な回転角度を決定し、画像を回転させる
 - 結果を以下に示す
@@ -54,14 +62,34 @@
 
 - 最も精度が高い組み合わせの結果を以下に示す
 <div>
-    <img src="figure/scatter_hist_align.png" style="display: block; margin: auto;"/>
+    <img src="figure/PaDim/scatter_hist_align.png" style="display: block; margin: auto;"/>
     <p style="text-align: center; font-weight: bold;">異常値スコアと出現頻度</p>
-    <img src="figure/rocauc_curve_align.png" style="display: block; margin: auto;"/>
+    <img src="figure/PaDim/rocauc_curve_align.png" style="display: block; margin: auto;"/>
+    <p style="text-align: center; font-weight: bold;">ROCカーブとAUC</p>
+</div>
+
+### 2週目
+### 特徴レイヤーの選択
+| backbone                   | first_layer | second_layer | rocauc        |
+|:--------------------------:|:-----------:|:------------:|:-------------:|
+| PaDim<br>(Wide-ResNet50-2) |             |              | 0.8981        |
+| Wide-ResNet50-2            | 3           | 5            | 0.9867        |
+| DenseNet201                | 1           | 33           | 0.9813        |
+| EfficientNet-B5            | 0           | 6            | **0.9889**    |
+
+- 最も精度が高い組み合わせの結果を以下に示す
+<div>
+    <img src="figure/PatchCore/scatter_hist_efficientnet.png" style="display: block; margin: auto;"/>
+    <p style="text-align: center; font-weight: bold;">異常値スコアと出現頻度</p>
+    <img src="figure/PatchCore/rocauc_curve_efficientnet.png" style="display: block; margin: auto;"/>
     <p style="text-align: center; font-weight: bold;">ROCカーブとAUC</p>
 </div>
 
 ## やり残し
+### 1週目
 - ねじの向き合わせで精度が下がることの考察
 - 画像のリサイズとバックボーンの影響
 - PatchCore
   - SOTAなのでまずこっちをやればよかった
+### 2周柄
+- 画像サイズの影響

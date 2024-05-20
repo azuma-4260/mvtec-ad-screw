@@ -2,12 +2,14 @@ import torch
 from torchvision import models
 from seed import torch_fix_seed
 from PaDim import *
+from torchinfo import summary
 
+backbones = ['wide_resnet50_2', 'densenet201', 'effficientnet-b5']
 
 # 特徴抽出器の準備
-def prepare_extractor(layer2_index=-1, layer3_index=-1, backbone='wide_resnet50_2'):
-    backbones = ['wide_resnet50_2', 'densenet201']
-    assert backbone in backbones, 'backbone must be wide_resnet50_2 or dencenet201'
+def prepare_extractor(first_layer_index=-1, second_layer_index=-1, backbone='wide_resnet50_2'):
+    print('backbone =', backbone)
+    assert backbone in backbones, 'invalid backbone'
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -19,15 +21,28 @@ def prepare_extractor(layer2_index=-1, layer3_index=-1, backbone='wide_resnet50_
 
     if backbone == backbones[0]:
         model = models.wide_resnet50_2(weights=models.Wide_ResNet50_2_Weights.IMAGENET1K_V1)
-        model.layer2[layer2_index].register_forward_hook(hook)
-        model.layer3[layer3_index].register_forward_hook(hook)
+        model.layer2[first_layer_index].register_forward_hook(hook)
+        model.layer3[second_layer_index].register_forward_hook(hook)
 
     elif backbone == backbones[1]:
+        if first_layer_index == -1:
+            first_layer_index = 12
+        if second_layer_index == -1:
+            second_layer_index = 48
         model = models.densenet201(weights=models.DenseNet201_Weights.IMAGENET1K_V1)
-        block2_layer = getattr(model.features.denseblock2, f'denselayer{layer2_index}')
-        block3_layer = getattr(model.features.denseblock3, f'denselayer{layer3_index}')
+        block2_layer = getattr(model.features.denseblock2, f'denselayer{first_layer_index}')
+        block3_layer = getattr(model.features.denseblock3, f'denselayer{second_layer_index}')
         block2_layer.register_forward_hook(hook)
         block3_layer.register_forward_hook(hook)
+
+    elif backbone == backbones[2]:
+        assert -1 <= first_layer_index <= 4, 'invalid first layer index'
+        assert -1 <= second_layer_index <= 6, 'invalid second layer index'
+        model = models.efficientnet_b5(weights=models.EfficientNet_B5_Weights.IMAGENET1K_V1)
+        model.features[3][first_layer_index].register_forward_hook(hook)
+        model.features[5][second_layer_index].register_forward_hook(hook)
+
+    summary(model, input_size=(1, 3, 224, 224))
 
     model.eval()
     model.to(device)
@@ -458,7 +473,7 @@ def get_anomaly_score(feat_test, search_index, types_test):
 def main(save_dir, backbone):
     torch_fix_seed(0)
 
-    model, outputs, device = prepare_extractor(layer2_index=1, layer3_index=33, backbone=backbone)
+    model, outputs, device = prepare_extractor(first_layer_index=0, second_layer_index=6, backbone=backbone)
 
     # ファイル名を取得
     files_train, files_test, types_test = get_files()
@@ -482,8 +497,7 @@ def main(save_dir, backbone):
     get_anomaly_detection(score_test, types_test, save_dir)
 
 if __name__ == '__main__':
-    backbones = ['wide_resnet50_2', 'densenet201']
-    backbone = backbones[1]
+    backbone = backbones[2]
     save_dir = os.path.join('results/PatchCore/base', backbone)
     os.makedirs(save_dir, exist_ok=True)
     main(save_dir, backbone=backbone)

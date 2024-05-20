@@ -51,12 +51,28 @@ def PaDim():
 
 def PatchCore(save_dir, backbone):
     results = []
-    layer2_start = 0 if backbone == 'wide_resnet50_2' else 1
-    layer2_end = 3 if backbone == 'wide_resnet50_2' else 12
-    layer2_step = 1 if backbone == 'wide_resnet50_2' else 4
-    layer3_start = 0 if backbone == 'wide_resnet50_2' else 1
-    layer3_end = 6 if backbone == 'wide_resnet50_2' else 48
-    layer3_step = 1 if backbone == 'wide_resnet50_2' else 8
+    if backbone == 'wide_resnet50_2':
+        layer2_start = 0
+        layer2_end = 3
+        layer2_step = 1
+        layer3_start = 0
+        layer3_end = 6
+        layer3_step = 1
+    elif backbone == 'densenet201':
+        layer2_start = 1
+        layer2_end = 12
+        layer2_step = 4
+        layer3_start = 1
+        layer3_end = 48
+        layer3_step = 8
+    elif backbone == 'effficientnet-b5':
+        layer2_start = 0
+        layer2_end = 4
+        layer2_step = 1
+        layer3_start = 0
+        layer3_end = 6
+        layer3_step = 1
+
     for i in range(layer2_start, layer2_end + 1, layer2_step):
         for j in range(layer3_start, layer3_end + 1, layer3_step):
             layer2_index = i
@@ -99,11 +115,12 @@ def PatchCore(save_dir, backbone):
 
 if __name__ == '__main__':
     mode = 'PatchCore'
+    backbones = ['wide_resnet50_2', 'densenet201', 'effficientnet-b5']
 
     if mode == 'PaDim':
         PaDim()
     else:
-        backbone = 'densenet201'
+        backbone = backbones[2]
         save_dir = f'results/PatchCore/tuning/{backbone}'
         os.makedirs(save_dir, exist_ok=True)
         PatchCore(save_dir, backbone)
